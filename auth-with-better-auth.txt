@@ -1,0 +1,37 @@
+DOKUMENTASI INCLUDE BETTER AUTH X GOOGLE
+
+# TAHAP 1
+    1. KUNJUNGI : 
+            https://www.better-auth.com/
+
+    2. KE BAGIAN INSTAL DAN GENERATE SECRET SERTA URL 
+    3. TENTUKAN PROVIDER : GOOGLE
+    4. KUNJUNGI :
+            https://console.cloud.google.com/
+
+    5. CREATE PROJECT
+    6. DI SEARCH NAVBAR ATAS CARI 
+            brand 
+
+    7. KLIK CREATE DAN ISI FORM :
+            name project
+            email 
+            audience : external 
+            another email 
+            finish 
+            
+# TAHAP 2
+    8. PPADA SIDEBAR KIRI KLIK CLIENTS KEMUDIAN KLIK CREATE OAuth 2.0 PADA BUTTON LINK ATAS LALU ISI FORM 
+            tipe
+            nama
+            Authorized JavaScript origins : http://localhost:3000 (masih mode dev)
+            Authorized redirect URIs : http://localhost:3000/api/auth/callback/google (api yang akan di hit oleh better auth)
+
+    9. KEMUDIAN COPY 2 HAL YANG DIBERIKAN KE ENV
+            GOOGLE_CLIENT_ID=
+            GOOGLE_CLIENT_SECRET=
+
+# TAHAP 3
+   10. KEMBALI PADA PECARIAN PADA NAVBAR ATAS KEMUDIAN KETIK 
+            Google People API
+   11. KLIK ENABLE  

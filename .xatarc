@@ -1,0 +1,6 @@
+{
+  "databaseURL": "https://Abu-Solihin-Alhakim-s-workspace-nq4u10.ap-southeast-2.xata.sh/db/jsm_snapcast",
+  "codegen": {
+    "output": "src/xata.ts"
+  }
+}

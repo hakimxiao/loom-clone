@@ -1,0 +1,121 @@
+AGAR AUTH KITA BERJALAN MAKA LAST STEP ADALAH INTEGRASI DRIZZLE BETTER AUTH DAN XATA : 
+
+    STEP BY STEP : 
+
+    @_STEP A :
+        1. Buat file lib di route level \ didalam nya buat file auth.ts yang isinya : 
+                import { db } from "@/drizzle/db";
+                import { betterAuth } from "better-auth";
+                import { drizzleAdapter } from "better-auth/adapters/drizzle";
+
+                export const auth = betterAuth({
+                    database: drizzleAdapter(db, {
+                        provider: 'pg'
+                    })
+                })
+        2. GENERATE AUTH SCHEMA : 
+            - Jalankan  perintah berikut di cli :   npx @better-auth/cli generate
+              Maka saat selesai anda akan diberikan file auth-schema.ts di root level 
+            - Selanjutnya copy semua schema untuk auth ini dan masukkan di :  @/drizzle/schema.ts 
+              kemudian hapus aja file auth-schema.ts
+        
+        4. PUSH SCHEMA KE DATABASE : 
+            Karena auth kita sudah memilikji schema maka langkah selanjutnya adalah melakukkan push ke database 
+            - jalankan perintah ini di cli :    npx drizzle-kit push
+        
+        5. LAST SET UP 
+            - setelah menjalankan maka ada beberapa hal yang harus dirubah yaitu : 
+                1. @/lib/auth.ts (disini kita harus menambahkan schema seperti ini) :   
+                        import { db } from "@/drizzle/db";
+                        import { betterAuth } from "better-auth";
+                        import { drizzleAdapter } from "better-auth/adapters/drizzle";
+                        import {schema} from '@/drizzle/schema';
+
+                        export const auth = betterAuth({
+                            database: drizzleAdapter(db, {
+                                provider: 'pg',
+                                schema
+                            })
+                        })
+                
+                2. Saat menambahkan itu anda akan mendapati error karena tidak ada module schema disana 
+                   dan tantu itu benar maka kita ke file @/drizzle/schema.ts 
+                    - disini kita harus membuat module baru yang merupakan pembungkus objejk objek : 
+                        import { pgTable, text, timestamp, boolean } from "drizzle-orm/pg-core";
+                        export const user = pgTable("user", {
+                            ......
+                        });
+
+                        export const session = pgTable("session", {
+                            .....
+                        });
+
+                        export const account = pgTable("account", {
+                            ....
+                        });
+
+                        export const verification = pgTable("verification", {
+                            .....
+                        });
+
+                        // DIBAGIAN INI :
+                        export const schema = {
+                            user,
+                            account,
+                            session,
+                            verification
+                    }
+
+                3. Setup social provider ke google di fifle @/lib/auth.ts, plugins dan base url
+                    - tambahkan objeck sosialProvider : 
+                        import { db } from "@/drizzle/db";
+                        import { betterAuth } from "better-auth";
+                        import { drizzleAdapter } from "better-auth/adapters/drizzle";
+                        import {schema} from '@/drizzle/schema';
+
+                        export const auth = betterAuth({
+                            database: drizzleAdapter(db, {
+                                provider: 'pg',
+                                schema
+                            }),
+                            // bagian ini :
+                            socialProviders: {
+                                google: {
+                                    clientId: process.env.GOOGLE_CLIENT_ID!,
+                                    clientSecret: process.env.GOOGLE_CLIENT_SECRET!,
+                                }
+                            }
+                            plugins: [nextCookies()],
+                            baseURL: process.env.NEXT_PUBLIC_BASE_URL!,  // jangan lupa di buat di .env
+                        })
+    
+    @_STEP B || AUTH CLIENT:
+        1. Buat file @/lib/auth-client.ts yang isinya : 
+            import { createAuthClient } from "better-auth/react";
+
+            export const authClient = createAuthClient({
+                baseURL: process.env.NEXT_PUBLIC_BASE_URL!,
+            }) 
+    
+    @_STEP C || API ROUTE:
+        1. buat route folder pada root route yaitu api/auth/[...all]/route.ts   didalamnya isi ini : 
+                import { auth } from "@/lib/auth";
+                import { toNextJsHandler } from "better-auth/next-js";
+
+                export const { GET, POST} = toNextJsHandler(auth.handler);
+    
+    @_LAST STEP : TAMBAHKAN KE UI 
+        - Dibagian yang berhubungan login maka anda tambahkan ini misal pada button : 
+                <button onClick={handleSignIn}>
+                    <Image
+                        src="/assets/icons/google.svg"
+                        alt="google"
+                        width={22}
+                        height={22}
+                    />
+                    <span>Sign In With Google</span>
+                </button>
+        - dan tentu anda harus buat function handler nya, yang isinya berikut : 
+                const handleSignIn = async () => {
+                    return await authClient.signIn.social({ provider: "google" });
+                };

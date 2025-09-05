@@ -1,0 +1,37 @@
+Link : https://orm.drizzle.team/
+
+    DOKUMENTASI INCLUDE XATA DENGAN DRIZZLE  : https://orm.drizzle.team/docs/get-started/xata-new
+
+SETUP DARI 0 :
+    STEP - BY - STEP : 
+        1. Instalasi 
+            - npm i drizzle-orm
+            - npm i -D  drizzle-kit :   Ini adalah CLI migration tools yang digunakan untuk membuat migrasi sql 
+            - npm i pg              :   library postgres
+        2. SetUp :
+            - Buat folder drizzle di route level 
+            - didalamnya buat file db.ts yang isinya seperti berikut :                   (@/drizzle/db.ts)
+                    import { getXataClient } from "@/xata";
+                    import { drizzle } from "drizzle-orm/xata-http";    
+
+                    const xata = getXataClient();
+                    export const db = drizzle(xata);
+            - setelah buat db file kita harus buat file schema didalam folder yang sama : (@/drizzle/schema.ts)
+                ISINYA DI SKIP DLU KARENA KITA AKAN BUAT DARI BETTER AUTH
+        3. Config drizzle : 
+            - Buat file drizzle.config.ts didalam root level 
+            - Install dotenv : npm i dotenv
+            - Di file drizzle.config.ts, kita setup menjadi seperti ini : 
+                        import {config} from 'dotenv';
+                        import {defineConfig} from 'drizzle-kit';
+
+                        config({ path: './.env'});
+
+                        export default defineConfig({
+                            schema: './drizzle/schema.ts',
+                            out: './drizzle/migrations', // lokasi hasil mmigrasi
+                            dialect: 'postgresql',
+                            dbCredentials: {
+                                url: process.env.DATABASE_URL_POSTGRES!,
+                            }
+                        });

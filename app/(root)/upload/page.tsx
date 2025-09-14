@@ -1,15 +1,15 @@
 "use client";
 
-import { FormEvent, ChangeEvent, useState, useEffect } from "react";
-import { FileInput, FormField } from "@/components";
-import { MAX_THUMBNAIL_SIZE, MAX_VIDEO_SIZE } from "@/constants";
-import { useFileInput } from "@/lib/hooks/useFileInput";
+import { useState, FormEvent, ChangeEvent, useEffect } from "react";
 import {
-  getThumbnailUploadUrl,
   getVideoUploadUrl,
+  getThumbnailUploadUrl,
   saveVideoDetails,
 } from "@/lib/actions/video";
 import { useRouter } from "next/navigation";
+import { FileInput, FormField } from "@/components";
+import { useFileInput } from "@/lib/hooks/useFileInput";
+import { MAX_THUMBNAIL_SIZE, MAX_VIDEO_SIZE } from "@/constants";
 
 const uploadFileToBunny = (
   file: File,
@@ -24,23 +24,21 @@ const uploadFileToBunny = (
     },
     body: file,
   }).then((response) => {
-    if (!response.ok) throw new Error("Failed to upload fil");
+    if (!response.ok)
+      throw new Error(`Upload failed with status ${response.status}`);
   });
 
 const UploadPage = () => {
   const router = useRouter();
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [videoDuration, setVideoDuration] = useState(0);
-
-  const [error, setError] = useState("");
-
+  const [error, setError] = useState<string | null>(null);
+  const [videoDuration, setVideoDuration] = useState<number | null>(null);
   const [formData, setFormData] = useState<VideoFormValues>({
     title: "",
     description: "",
     tags: "",
     visibility: "public",
   });
-
   const video = useFileInput(MAX_VIDEO_SIZE);
   const thumbnail = useFileInput(MAX_THUMBNAIL_SIZE);
 
@@ -50,30 +48,64 @@ const UploadPage = () => {
     }
   }, [video.duration]);
 
+  useEffect(() => {
+    const checkForRecordedVideo = async () => {
+      try {
+        const stored = sessionStorage.getItem("recordedVideo");
+        if (!stored) return;
+
+        const { url, name, type, duration } = JSON.parse(stored);
+        const blob = await fetch(url).then((res) => res.blob());
+        const file = new File([blob], name, { type, lastModified: Date.now() });
+
+        if (video.inputRef.current) {
+          const dataTransfer = new DataTransfer();
+          dataTransfer.items.add(file);
+          video.inputRef.current.files = dataTransfer.files;
+
+          const event = new Event("change", { bubbles: true });
+          video.inputRef.current.dispatchEvent(event);
+
+          video.handleFileChange({
+            target: { files: dataTransfer.files },
+          } as ChangeEvent<HTMLInputElement>);
+        }
+
+        if (duration) setVideoDuration(duration);
+
+        sessionStorage.removeItem("recordedVideo");
+        URL.revokeObjectURL(url);
+      } catch (err) {
+        console.error("Error loading recorded video:", err);
+      }
+    };
+
+    checkForRecordedVideo();
+  }, [video]);
+
   const handleInputChange = (
     e: ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>
   ) => {
     const { name, value } = e.target;
-
     setFormData((prev) => ({ ...prev, [name]: value }));
   };
 
-  const handleSubmit = async (e: FormEvent) => {
+  const onSubmit = async (e: FormEvent) => {
     e.preventDefault();
 
     setIsSubmitting(true);
 
     try {
       if (!video.file || !thumbnail.file) {
-        setError("Tolong upload video dan thumbnail");
-        return;
-      }
-      if (!formData.title || !formData.description) {
-        setError("Tolong isi judul dan deskripsi");
+        setError("Please upload video and thumbnail files.");
         return;
       }
 
-      // 0. upload url the video to bunny
+      if (!formData.title || !formData.description) {
+        setError("Please fill in all required fields.");
+        return;
+      }
+
       const {
         videoId,
         uploadUrl: videoUploadUrl,
@@ -81,12 +113,10 @@ const UploadPage = () => {
       } = await getVideoUploadUrl();
 
       if (!videoUploadUrl || !videoAccessKey)
-        throw new Error("Gagal mendapatkan video upload credentials");
+        throw new Error("Failed to get video upload credentials");
 
-      // 1. upload the video to bunny
       await uploadFileToBunny(video.file, videoUploadUrl, videoAccessKey);
 
-      // upload thumbnail to DB
       const {
         uploadUrl: thumbnailUploadUrl,
         cdnUrl: thumbnailCdnUrl,
@@ -94,16 +124,14 @@ const UploadPage = () => {
       } = await getThumbnailUploadUrl(videoId);
 
       if (!thumbnailUploadUrl || !thumbnailCdnUrl || !thumbnailAccessKey)
-        throw new Error("Gagal mendapatkan thumbnail upload credentials");
+        throw new Error("Failed to get thumbnail upload credentials");
 
-      // Attach thumbnail
       await uploadFileToBunny(
         thumbnail.file,
         thumbnailUploadUrl,
         thumbnailAccessKey
       );
 
-      // Create a new DB entry for video details
       await saveVideoDetails({
         videoId,
         thumbnailUrl: thumbnailCdnUrl,
@@ -113,35 +141,35 @@ const UploadPage = () => {
 
       router.push(`/video/${videoId}`);
     } catch (error) {
-      console.log("Error submitting form: ", error);
+      console.error("Error submitting form:", error);
     } finally {
       setIsSubmitting(false);
     }
   };
 
   return (
-    <div className="wrapper-md upload-page">
-      <h1>Upload Video</h1>
+    <main className="wrapper-md upload-page">
+      <h1>Upload a video</h1>
       {error && <div className="error-field">{error}</div>}
-
       <form
-        className="rounded-20 shadow-10 gap-6 w-full flex flex-col px-5 py-7.5"
-        onSubmit={handleSubmit}
+        className="rounded-20 gap-6 w-full flex flex-col shadow-10 px-5 py-7.5"
+        onSubmit={onSubmit}
       >
         <FormField
           id="title"
           label="Title"
-          placeholder="Masukkan judul video yang jelas dan ringkas"
           value={formData.title}
           onChange={handleInputChange}
+          placeholder="Enter a clear and concise video title"
         />
+
         <FormField
           id="description"
           label="Description"
-          placeholder="Deskripsikan tentang apa video ini"
           value={formData.description}
-          as="textarea"
           onChange={handleInputChange}
+          placeholder="Briefly describe what this video is about"
+          as="textarea"
         />
 
         <FileInput
@@ -172,19 +200,19 @@ const UploadPage = () => {
           id="visibility"
           label="Visibility"
           value={formData.visibility}
+          onChange={handleInputChange}
           as="select"
           options={[
-            { value: "public", label: "public" },
-            { value: "private", label: "private" },
+            { value: "public", label: "Public" },
+            { value: "private", label: "Private" },
           ]}
-          onChange={handleInputChange}
         />
 
         <button type="submit" disabled={isSubmitting} className="submit-button">
           {isSubmitting ? "Uploading..." : "Upload Video"}
         </button>
       </form>
-    </div>
+    </main>
   );
 };
 

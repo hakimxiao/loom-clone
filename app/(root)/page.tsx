@@ -22,10 +22,15 @@ const page = async ({ searchParams }: SearchParams) => {
           {videos.map(({ video, user }) => (
             <VideoCard
               key={video.id}
-              {...video}
+              id={video.videoId}
+              title={video.title}
               thumbnail={video.thumbnailUrl}
-              userImg={user?.image || ""}
-              username={user?.name || "Guest"}
+              createdAt={video.createdAt}
+              userImg={user?.image ?? ""}
+              username={user?.name ?? "Guest"}
+              views={video.views}
+              visibility={video.visibility}
+              duration={video.duration}
             />
           ))}
         </section>
@@ -33,7 +38,7 @@ const page = async ({ searchParams }: SearchParams) => {
         <EmptyState
           icon="/assets/icons/video.svg"
           title="No Videos Found"
-          description="Try adjust your search"
+          description="Try adjusting your search."
         />
       )}
     </main>

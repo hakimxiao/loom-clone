@@ -2,6 +2,7 @@
 
 import { ICONS } from "@/constants";
 import { useScreenRecording } from "@/lib/hooks/useScreenRecording";
+import { duration } from "drizzle-orm/gel-core";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { useRef, useState } from "react";
@@ -37,7 +38,23 @@ const RecordScreen = () => {
       videoRef.current.src = recordedVideoUrl;
     }
   };
-  const goToUpload = () => {};
+  const goToUpload = () => {
+    if (!recordedBlob) return;
+    const url = URL.createObjectURL(recordedBlob);
+
+    sessionStorage.setItem(
+      "recordedVideo",
+      JSON.stringify({
+        url,
+        name: "screen-recording.webm",
+        type: recordedBlob.type,
+        size: recordedBlob.size,
+        duration: recordingDuration || 0,
+      })
+    );
+    router.push("/upload");
+    closeModal();
+  };
 
   return (
     <div className="record">

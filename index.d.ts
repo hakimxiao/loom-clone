@@ -90,7 +90,6 @@ declare interface VideoDetailHeaderProps {
   ownerId: string;
   visibility: string;
   thumbnailUrl: string;
-  id: string;
 }
 
 declare interface VideoPlayerProps {
@@ -119,6 +118,7 @@ declare interface VideoDetails {
   title: string;
   description: string;
   thumbnailUrl: string;
+  tags: string | string[];
   visibility: Visibility;
   duration?: number | null;
 }
